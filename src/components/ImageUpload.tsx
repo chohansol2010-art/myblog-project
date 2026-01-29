@@ -102,7 +102,7 @@ export default function ImageUpload({ value, onChange, userId }: ImageUploadProp
       setProgress(40);
 
       // Supabase Storage에 업로드
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('post-thumbnails')
         .upload(fileName, resizedBlob, {
           contentType: file.type,

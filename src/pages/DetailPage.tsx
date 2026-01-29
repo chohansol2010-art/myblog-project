@@ -62,16 +62,13 @@ export default function DetailPage() {
 
       // 조회수 증가 (비동기, 에러 무시)
       if (data) {
-        supabase
+        void supabase
           .from('posts')
           .update({ view_count: (data.view_count || 0) + 1 })
           .eq('id', id)
           .then(() => {
             // 조회수 증가 후 post state 업데이트
             setPost({ ...data, view_count: (data.view_count || 0) + 1 });
-          })
-          .catch(() => {
-            // 조회수 증가 실패해도 무시
           });
       }
     } catch (error) {

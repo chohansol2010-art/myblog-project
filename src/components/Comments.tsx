@@ -256,7 +256,7 @@ export default function Comments({ postId }: CommentsProps) {
   };
 
   // 답글 작성
-  const handleReplySubmit = async (parentId: string, parentUsername: string) => {
+  const handleReplySubmit = async (parentId: string, _parentUsername: string) => {
     if (!user) {
       toast.error('로그인이 필요합니다.');
       return;

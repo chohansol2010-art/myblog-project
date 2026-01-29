@@ -281,13 +281,12 @@ export default function ProfileEditModal({ open, onOpenChange }: ProfileEditModa
           {/* 이메일 공개 여부 */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="email-visible">이메일 공개</Label>
+              <Label>이메일 공개</Label>
               <p className="text-sm text-gray-500">
                 다른 사용자에게 이메일을 공개합니다
               </p>
             </div>
             <Switch
-              id="email-visible"
               checked={emailVisible}
               onCheckedChange={setEmailVisible}
             />
