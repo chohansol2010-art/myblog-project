@@ -1,0 +1,70 @@
+---
+description: myblog 프로젝트 UI 개발 규칙 - shadcn/ui 컴포넌트 활용
+alwaysApply: true
+---
+
+# myblog 프로젝트 UI 개발 규칙
+
+## shadcn/ui 컴포넌트 우선 사용
+
+UI를 디자인하고 구현할 때는 shadcn/ui 컴포넌트를 적극적으로 활용하세요.
+
+### 컴포넌트 추가 방법
+
+새로운 shadcn/ui 컴포넌트가 필요한 경우, 반드시 터미널 명령어를 사용하여 추가하세요:
+
+```bash
+npx shadcn@latest add [component-name]
+```
+
+### 예시
+
+```bash
+# 카드 컴포넌트 추가
+npx shadcn@latest add card
+
+# 여러 컴포넌트 동시 추가
+npx shadcn@latest add card dialog badge
+
+# 폼 컴포넌트 추가
+npx shadcn@latest add form input label
+```
+
+### 현재 프로젝트 설정
+
+- **스타일**: new-york
+- **TypeScript**: 활성화
+- **Tailwind CSS**: 활성화 (CSS Variables 사용)
+- **아이콘 라이브러리**: lucide-react
+- **컴포넌트 경로**: `@/components/ui`
+
+### 개발 원칙
+
+1. **컴포넌트 재사용**: 이미 추가된 shadcn/ui 컴포넌트를 최대한 활용
+2. **일관된 스타일**: new-york 스타일 가이드 준수
+3. **타입 안정성**: TypeScript를 활용한 타입 정의
+4. **접근성**: shadcn/ui의 기본 접근성 기능 유지
+
+### ❌ 잘못된 방법
+
+```tsx
+// 직접 HTML 요소로 버튼 구현
+<button className="px-4 py-2 bg-blue-500">
+  클릭
+</button>
+```
+
+### ✅ 올바른 방법
+
+```tsx
+// shadcn/ui Button 컴포넌트 사용
+import { Button } from "@/components/ui/button"
+
+<Button variant="default">
+  클릭
+</Button>
+```
+
+## 컴포넌트 커스터마이징
+
+shadcn/ui 컴포넌트는 `src/components/ui/` 디렉토리에 소스 코드가 포함되므로, 필요시 직접 수정 가능합니다.

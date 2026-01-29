@@ -1,0 +1,166 @@
+---
+description: myblog 프로젝트 Supabase 데이터베이스 관리 규칙 - MCP 직접 활용
+alwaysApply: true
+---
+
+# myblog 프로젝트 Supabase 데이터베이스 관리 규칙
+
+## Supabase MCP 직접 사용
+
+Supabase와 관련된 데이터베이스 작업(테이블 생성, 트리거 설정, RLS 정책 등)을 수행할 때는 **SQL 파일을 생성하지 말고** MCP(Model Context Protocol)를 통해 직접 실행하세요.
+
+### 기본 원칙
+
+1. **SQL 파일 생성 금지**: `*.sql` 파일을 생성하지 않습니다
+2. **MCP 직접 실행**: Supabase MCP 서버를 통해 SQL 쿼리를 직접 실행합니다
+3. **즉시 적용**: 데이터베이스 변경 사항을 즉시 적용하고 확인합니다
+4. **자동화**: 테이블, 트리거, 정책을 자동으로 생성하고 검증합니다
+
+### ❌ 잘못된 방법
+
+```markdown
+1. supabase-profiles-setup.sql 파일 생성
+2. 사용자에게 Supabase 대시보드에서 실행하도록 안내
+3. 수동으로 SQL 복사 & 붙여넣기
+```
+
+### ✅ 올바른 방법
+
+```markdown
+1. Supabase MCP 서버에 연결
+2. SQL 쿼리를 MCP를 통해 직접 실행
+3. 실행 결과 확인 및 검증
+4. 필요시 롤백 또는 수정
+```
+
+## 주요 사용 사례
+
+### 1. 테이블 생성
+
+새로운 테이블이 필요한 경우:
+
+```sql
+-- MCP를 통해 직접 실행
+create table if not exists profiles (
+  id uuid references auth.users(id) on delete cascade primary key,
+  email text unique not null,
+  nickname text unique not null,
+  bio text,
+  avatar_url text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+```
+
+### 2. RLS (Row Level Security) 정책 설정
+
+```sql
+-- MCP를 통해 직접 실행
+alter table profiles enable row level security;
+
+create policy "Profiles are viewable by everyone" on profiles
+  for select using (true);
+
+create policy "Users can update their own profile" on profiles
+  for update using (auth.uid() = id);
+```
+
+### 3. 트리거 생성
+
+```sql
+-- MCP를 통해 직접 실행
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, nickname, bio)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'nickname', split_part(new.email, '@', 1)),
+    nullif(new.raw_user_meta_data->>'bio', '')
+  )
+  on conflict (id) do update
+  set 
+    nickname = coalesce(excluded.nickname, profiles.nickname),
+    bio = coalesce(excluded.bio, profiles.bio);
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+```
+
+### 4. 인덱스 생성
+
+```sql
+-- MCP를 통해 직접 실행
+create index if not exists profiles_nickname_idx on profiles(nickname);
+create index if not exists profiles_email_idx on profiles(email);
+```
+
+## 워크플로우
+
+### 새로운 기능 추가 시
+
+1. **요구사항 분석**: 어떤 테이블/필드/정책이 필요한지 확인
+2. **MCP 실행**: Supabase MCP를 통해 SQL 직접 실행
+3. **검증**: 테이블 생성, 정책 적용, 트리거 동작 확인
+4. **클라이언트 코드 작성**: TypeScript/React 코드에서 새 테이블 사용
+5. **테스트**: 실제 동작 확인
+
+### 예시: 댓글 기능 추가
+
+```typescript
+// 1. MCP를 통해 comments 테이블 생성
+// 2. RLS 정책 설정
+// 3. 클라이언트 코드 작성
+
+const { data, error } = await supabase
+  .from('comments')
+  .insert([{ post_id: postId, content: content }]);
+```
+
+## 데이터베이스 구조
+
+### 현재 테이블
+
+- **profiles**: 사용자 프로필 정보
+  - `id` (uuid, primary key)
+  - `email` (text, unique)
+  - `nickname` (text, unique)
+  - `bio` (text, nullable)
+  - `avatar_url` (text, nullable)
+  - `created_at`, `updated_at` (timestamp)
+
+- **posts**: 블로그 게시글
+  - `id` (uuid, primary key)
+  - `title` (text)
+  - `content` (text)
+  - `author_id` (uuid, foreign key → auth.users)
+  - `created_at`, `updated_at` (timestamp)
+
+### 트리거
+
+- **handle_new_user**: auth.users에 사용자 생성 시 profiles 테이블 자동 생성
+- **update_updated_at_column**: 레코드 업데이트 시 updated_at 자동 갱신
+
+## 주의사항
+
+1. **백업**: 중요한 변경 전 데이터 백업 권장
+2. **롤백 계획**: 변경 사항을 되돌릴 수 있는 SQL 준비
+3. **테스트 환경**: 가능하면 테스트 프로젝트에서 먼저 실행
+4. **보안**: RLS 정책을 항상 설정하여 데이터 보안 유지
+
+## MCP 명령어 사용법
+
+Supabase MCP 서버가 활성화되어 있는 경우:
+
+- SQL 쿼리를 직접 실행
+- 테이블 스키마 조회
+- 데이터 확인 및 수정
+- 정책 및 트리거 관리
+
+모든 작업은 MCP를 통해 즉시 실행되며, 별도의 SQL 파일 생성이나 수동 복사가 필요하지 않습니다.
